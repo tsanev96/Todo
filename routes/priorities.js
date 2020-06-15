@@ -18,7 +18,7 @@ router.get('/:id', validateObjectId, async (req, res) => {
   res.send(priority);
 });
 
-router.post('/', [auth, admin], async (req, res) => {
+router.post('/', auth, admin, async (req, res) => {
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
 
@@ -28,7 +28,7 @@ router.post('/', [auth, admin], async (req, res) => {
   res.send(priority);
 });
 
-router.put('/:id', [auth, admin, validateObjectId], async (req, res) => {
+router.put('/:id', auth, admin, validateObjectId, async (req, res) => {
   // TODO:
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
@@ -43,7 +43,7 @@ router.put('/:id', [auth, admin, validateObjectId], async (req, res) => {
   res.send(priority);
 });
 
-router.delete('/:id', [auth, admin, validateObjectId], async (req, res) => {
+router.delete('/:id', auth, admin, validateObjectId, async (req, res) => {
   const priority = await Priority.findByIdAndRemove(req.params.id);
   if (!priority) return res.status(404).send('Priority already deleted');
 

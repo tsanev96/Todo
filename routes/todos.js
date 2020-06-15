@@ -8,7 +8,7 @@ const validateObjectId = require('../middleware/validateObjectId');
 
 router.get('/', auth, async (req, res) => {
   const user = await User.findById(req.user._id);
-  if (!user) return res.status(404).send('User not found');
+  // if (!user) return res.status(404).send('User not found');    ?!
   // TODO: sort by importance
   res.send(user.todos);
 });

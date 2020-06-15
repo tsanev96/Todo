@@ -2,7 +2,6 @@ const request = require('supertest');
 const { Priority } = require('../../../models/priority');
 const { User } = require('../../../models/user');
 const mongoose = require('mongoose');
-const { before } = require('lodash');
 
 describe('/api/priorities', () => {
   let server;

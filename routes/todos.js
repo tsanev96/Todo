@@ -13,13 +13,12 @@ router.get('/', auth, async (req, res) => {
   res.send(user.todos);
 });
 
-router.get('/:id', [auth, validateObjectId], async (req, res) => {
-  const user = await User.findById(req.user._id)
-    .select('todos')
-    .populate('importance');
-  if (!user) return res.status(404).send('User not found');
+router.get('/:id', auth, validateObjectId, async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const todo = user.todos.id(req.params.id);
+  if (!todo) return res.status(404).send('Todo not found');
 
-  res.send(user.todos);
+  res.send(todo);
 });
 
 router.post('/', auth, async (req, res) => {
@@ -47,17 +46,13 @@ router.post('/', auth, async (req, res) => {
 });
 
 router.put('/:id', auth, validateObjectId, async (req, res) => {
-  // TODO:
   const { error } = validate(req.body);
   if (error) return res.status(400).send(error.details[0].message);
-
-  const user = await User.findById(req.user._id);
-  if (!user) return res.status(404).send('User not found');
 
   const priority = await Priority.findById(req.body.priorityId);
   if (!priority) return res.status(404).send('Priority not found');
 
-  const todo = {
+  const reqTodo = {
     name: req.body.name,
     priority: {
       _id: priority._id,
@@ -66,16 +61,27 @@ router.put('/:id', auth, validateObjectId, async (req, res) => {
     },
   };
 
-  await user.save();
+  const todo = await User.updateOne(
+    {
+      _id: req.user._id,
+      'todos._id': req.params.id,
+    },
+    {
+      $set: {
+        'todos.$': reqTodo,
+      },
+    }
+  );
+  if (todo.nModified === 0) return res.status(404).send('Todo not found');
 
-  res.send(todo);
+  res.send(reqTodo);
 });
 
-router.delete('/:id', [auth, validateObjectId], async (req, res) => {
-  const todo = await Todo.findByIdAndRemove(req.params.id);
-  if (!todo) return res.status(404).send('todo already deleted');
-
-  res.send(todo);
+router.delete('/:id', auth, validateObjectId, async (req, res) => {
+  const user = await User.findById(req.user._id);
+  const todo = user.todos.id(req.params.id);
+  todo.remove();
+  user.save();
 });
 
 module.exports = router;

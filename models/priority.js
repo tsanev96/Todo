@@ -26,4 +26,4 @@ function validatePriority(priority) {
 
 module.exports.Priority = Priority;
 module.exports.prioritySchema = prioritySchema;
-module.exports.validate = validatePriority;
+module.exports.validatePriority = validatePriority;

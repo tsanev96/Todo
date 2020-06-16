@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express();
-const { Todo, validate } = require('../models/todo');
+const { Todo, validateTodo } = require('../models/todo');
 const { Priority } = require('../models/priority');
 const { User } = require('../models/user');
 const auth = require('../middleware/auth');
 const validateObjectId = require('../middleware/validateObjectId');
+const validate = require('../middleware/validate');
 
 router.get('/', auth, async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -21,13 +22,11 @@ router.get('/:id', auth, validateObjectId, async (req, res) => {
   res.send(todo);
 });
 
-router.post('/', auth, async (req, res) => {
-  const { error } = validate(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
-
+router.post('/', auth, validate(validateTodo), async (req, res) => {
   const priority = await Priority.findById(req.body.priorityId);
-  if (!priority) return res.status(404).send('Priority not found');
+  if (!priority) return res.status(400).send('Priority not found');
 
+  // needed if check ?
   const user = await User.findById(req.user._id);
   if (!user) return res.status(404).send('User not found');
 
@@ -45,37 +44,41 @@ router.post('/', auth, async (req, res) => {
   res.send(todo);
 });
 
-router.put('/:id', auth, validateObjectId, async (req, res) => {
-  const { error } = validate(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+router.put(
+  '/:id',
+  auth,
+  auth,
+  validate(validateTodo),
+  validateObjectId,
+  async (req, res) => {
+    const priority = await Priority.findById(req.body.priorityId);
+    if (!priority) return res.status(404).send('Priority not found');
 
-  const priority = await Priority.findById(req.body.priorityId);
-  if (!priority) return res.status(404).send('Priority not found');
-
-  const reqTodo = {
-    name: req.body.name,
-    priority: {
-      _id: priority._id,
-      name: priority.name,
-      importance: priority.importance,
-    },
-  };
-
-  const todo = await User.updateOne(
-    {
-      _id: req.user._id,
-      'todos._id': req.params.id,
-    },
-    {
-      $set: {
-        'todos.$': reqTodo,
+    const reqTodo = {
+      name: req.body.name,
+      priority: {
+        _id: priority._id,
+        name: priority.name,
+        importance: priority.importance,
       },
-    }
-  );
-  if (todo.nModified === 0) return res.status(404).send('Todo not found');
+    };
 
-  res.send(reqTodo);
-});
+    const todo = await User.updateOne(
+      {
+        _id: req.user._id,
+        'todos._id': req.params.id,
+      },
+      {
+        $set: {
+          'todos.$': reqTodo,
+        },
+      }
+    );
+    if (todo.nModified === 0) return res.status(404).send('Todo not found');
+
+    res.send(reqTodo);
+  }
+);
 
 router.delete('/:id', auth, validateObjectId, async (req, res) => {
   const user = await User.findById(req.user._id);

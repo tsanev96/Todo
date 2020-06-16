@@ -33,4 +33,4 @@ function validateTodo(todo) {
 
 module.exports.Todo = Todo;
 module.exports.todoSchema = todoSchema;
-module.exports.validate = validateTodo;
+module.exports.validateTodo = validateTodo;

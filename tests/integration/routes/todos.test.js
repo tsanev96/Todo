@@ -9,6 +9,7 @@ describe('/api/todos', () => {
   let token;
   let user;
   let todo;
+  let todoName;
   let priority;
 
   beforeEach(async () => {
@@ -19,36 +20,40 @@ describe('/api/todos', () => {
       email: 'a@gmail.com',
       password: '12345',
     });
-    priority = new Priority({ name: 'low', importance: 1 });
-    (todo = {
-      name: 'clean',
-      priority: {
-        _id: priority._id,
-        name: priority.name,
-        importance: priority.importance,
-      },
-    }),
-      (token = user.generateAuthToken());
-    user.todos.push(todo);
 
-    await user.save();
+    todoName = 'clean';
+    priority = new Priority({ name: 'low', importance: 1 });
+    priorityId = priority._id;
+    token = user.generateAuthToken();
+
     await priority.save();
+    await user.save();
+    // user and todos will be saved in describe
+    // because they need to be modified
+    // before saved
   });
+
   afterEach(async () => {
     server.close();
     await User.remove({});
     await Priority.remove({});
   });
 
-  describe('auth - repeated tests', () => {
-    test('should return 401 if user is not logged in', async () => {
-      const res = await request(server).get('/api/todos');
-
-      expect(res.status).toBe(401);
-    });
-  });
-
   describe('GET /', () => {
+    beforeEach(async () => {
+      todo = {
+        name: todoName,
+        priority: {
+          _id: priority._id,
+          name: priority.name,
+          importance: priority.importance,
+        },
+      };
+
+      user.todos.push(todo);
+      await user.save();
+    });
+
     test('should return 401 if user is not logged in', async () => {
       const res = await request(server).get('/api/todos');
 
@@ -78,6 +83,20 @@ describe('/api/todos', () => {
   });
 
   describe('GET /id', () => {
+    beforeEach(async () => {
+      todo = {
+        name: todoName,
+        priority: {
+          _id: priority._id,
+          name: priority.name,
+          importance: priority.importance,
+        },
+      };
+
+      user.todos.push(todo);
+      await user.save();
+    });
+
     test('should return 401 if user is not logged in', async () => {
       const res = await request(server).get('/api/todos');
 
@@ -98,7 +117,7 @@ describe('/api/todos', () => {
       expect(res.status).toBe(404);
     });
 
-    test('should return the todo', async () => {
+    test('should return the todo if id is valid', async () => {
       const id = user.todos[0]._id;
 
       const res = await request(server)
@@ -113,6 +132,107 @@ describe('/api/todos', () => {
   });
 
   describe('POST /', () => {
-    // 5 cases
+    beforeEach(() => {
+      todo = { name: todoName, priorityId };
+    });
+
+    const exec = () => {
+      return request(server)
+        .post('/api/todos')
+        .set('x-auth-token', token)
+        .send(todo);
+    };
+
+    test('should return 401 if user is not logged in', async () => {
+      token = '';
+
+      const res = await exec();
+
+      expect(res.status).toBe(401);
+    });
+
+    test('should return 400 if todo name is less than 5 char', async () => {
+      todo.name = '1234';
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return 400 if todo name is more than 250 char', async () => {
+      todo.name = new Array(252).join('a');
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return 400 if priorityId does not exist with valid ID', async () => {
+      todo.priorityId = mongoose.Types.ObjectId();
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return 400 if priorityId is invalid ID', async () => {
+      todo.priorityId = 1;
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return the todo if its saved in the DB', async () => {
+      const res = await exec();
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', todoName);
+      expect(res.body).toHaveProperty('priority');
+      expect(res.body).toHaveProperty('_id');
+    });
+  });
+
+  describe('PUT/ id', () => {
+    let updatedName = 'updated';
+
+    beforeEach(() => {
+      todo = { name: todoName, priorityId };
+    });
+
+    const exec = () => {
+      todo.name = updatedName;
+
+      return request(server)
+        .post('/api/todos')
+        .set('x-auth-token', token)
+        .send(todo);
+    };
+
+    test('should return 400 if todo name is less than 5 char', async () => {
+      updatedName = 'a';
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return 400 if todo name is more than 250 char', async () => {
+      updatedName = new Array(252).join('a');
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should update and return the todo', async () => {
+      const res = await exec();
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', updatedName);
+      expect(res.body).toHaveProperty('priority');
+      expect(res.body).toHaveProperty('_id');
+    });
   });
 });
+// 32

@@ -1,5 +1,5 @@
 const request = require('supertest');
-const { Todo } = require('../../../models/user');
+const { Todo } = require('../../../models/todo');
 const { User } = require('../../../models/user');
 const { Priority } = require('../../../models/priority');
 const mongoose = require('mongoose');
@@ -28,9 +28,9 @@ describe('/api/todos', () => {
 
     await priority.save();
     await user.save();
-    // user and todos will be saved in describe
+    // todos will be saved in describe
     // because they need to be modified
-    // before saved
+    // before saved in the db
   });
 
   afterEach(async () => {
@@ -194,21 +194,57 @@ describe('/api/todos', () => {
   });
 
   describe('PUT/ id', () => {
-    let updatedName = 'updated';
+    let savedTodoDb;
+    let updatedName;
+    let id;
 
-    beforeEach(() => {
-      todo = { name: todoName, priorityId };
+    beforeEach(async () => {
+      updatedName = 'updated';
+      savedTodoDb = new Todo({
+        name: 'clean',
+        priority: {
+          _id: priority._id,
+          name: priority.name,
+          importance: priority.importance,
+        },
+      });
+      user.todos.push(savedTodoDb);
+      await user.save();
+      id = savedTodoDb._id;
     });
 
     const exec = () => {
-      todo.name = updatedName;
+      todo = { name: updatedName, priorityId };
 
       return request(server)
-        .post('/api/todos')
+        .put(`/api/todos/${id}`)
         .set('x-auth-token', token)
         .send(todo);
     };
 
+    test('should return 401 if user is not logged in', async () => {
+      token = '';
+
+      const res = await exec();
+
+      expect(res.status).toBe(401);
+    });
+
+    test('should return 404 if valid id is passed but todo is not found', async () => {
+      id = mongoose.Types.ObjectId();
+
+      const res = await exec();
+
+      expect(res.status).toBe(404);
+    });
+
+    test('should return 404 if invalid id is passed', async () => {
+      id = 1;
+
+      const res = await exec();
+
+      expect(res.status).toBe(404);
+    });
     test('should return 400 if todo name is less than 5 char', async () => {
       updatedName = 'a';
 
@@ -225,14 +261,88 @@ describe('/api/todos', () => {
       expect(res.status).toBe(400);
     });
 
-    test('should update and return the todo', async () => {
+    test('should return 400 if priorityId is valid but does not exist', async () => {
+      updatedName = 'updated';
+      priorityId = mongoose.Types.ObjectId();
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should return 400 if priorityId is invalid', async () => {
+      updatedName = 'updated';
+      priorityId = 1;
+
+      const res = await exec();
+
+      expect(res.status).toBe(400);
+    });
+
+    test('should save and return the updated todo', async () => {
       const res = await exec();
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('name', updatedName);
+      expect(res.body).toHaveProperty('_id', todo._id);
       expect(res.body).toHaveProperty('priority');
-      expect(res.body).toHaveProperty('_id');
+    });
+  });
+
+  describe('DELETE/ id', () => {
+    let id;
+
+    beforeEach(async () => {
+      todo = new Todo({
+        name: 'clean',
+        priority: {
+          _id: priority._id,
+          name: priority.name,
+          importance: priority.importance,
+        },
+      });
+      user.todos.push(todo);
+      await user.save();
+      id = todo._id;
+    });
+
+    const exec = () => {
+      return request(server)
+        .delete(`/api/todos/${id}`)
+        .set('x-auth-token', token);
+    };
+
+    test('should return 401 if user is not logged in', async () => {
+      token = '';
+
+      const res = await exec();
+
+      expect(res.status).toBe(401);
+    });
+
+    test('should return 404 if valid id is passed but todo does not exist', async () => {
+      id = mongoose.Types.ObjectId();
+
+      const res = await exec();
+
+      expect(res.status).toBe(404);
+    });
+
+    test('should return 404 if invalid id is passed', async () => {
+      id = 1;
+
+      const res = await exec();
+
+      expect(res.status).toBe(404);
+    });
+
+    test('should return the todo if its deleted', async () => {
+      const res = await exec();
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('name', todo.name);
+      expect(res.body).toHaveProperty('_id', todo._id.toHexString());
+      expect(res.body).toHaveProperty('priority');
     });
   });
 });
-// 32

@@ -47,12 +47,11 @@ router.post('/', auth, validate(validateTodo), async (req, res) => {
 router.put(
   '/:id',
   auth,
-  auth,
   validate(validateTodo),
   validateObjectId,
   async (req, res) => {
     const priority = await Priority.findById(req.body.priorityId);
-    if (!priority) return res.status(404).send('Priority not found');
+    if (!priority) return res.status(400).send('Priority not found');
 
     const reqTodo = {
       name: req.body.name,
@@ -82,9 +81,13 @@ router.put(
 
 router.delete('/:id', auth, validateObjectId, async (req, res) => {
   const user = await User.findById(req.user._id);
+
   const todo = user.todos.id(req.params.id);
+  if (!todo) return res.status(404).send('Todo already deleted');
   todo.remove();
   user.save();
+
+  res.send(todo);
 });
 
 module.exports = router;

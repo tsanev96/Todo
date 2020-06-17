@@ -3,6 +3,7 @@ const { Todo } = require('../../../models/todo');
 const { User } = require('../../../models/user');
 const { Priority } = require('../../../models/priority');
 const mongoose = require('mongoose');
+const { after } = require('lodash');
 
 describe('/api/todos', () => {
   let server;
@@ -34,7 +35,7 @@ describe('/api/todos', () => {
   });
 
   afterEach(async () => {
-    server.close();
+    await server.close();
     await User.remove({});
     await Priority.remove({});
   });
@@ -84,14 +85,14 @@ describe('/api/todos', () => {
 
   describe('GET /id', () => {
     beforeEach(async () => {
-      todo = {
+      todo = new Todo({
         name: todoName,
         priority: {
           _id: priority._id,
           name: priority.name,
           importance: priority.importance,
         },
-      };
+      });
 
       user.todos.push(todo);
       await user.save();

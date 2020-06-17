@@ -1,4 +1,5 @@
 {
   "jwtPrivateKey": "",
-  "db": "mongodb://localhost/todo"
+  "db": "mongodb://localhost/todo",
+  "port": "3900"
 }

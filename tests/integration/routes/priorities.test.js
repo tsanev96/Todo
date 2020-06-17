@@ -9,7 +9,7 @@ describe('/api/priorities', () => {
   beforeEach(() => (server = require('../../../index')));
   afterEach(async () => {
     await Priority.remove({});
-    server.close();
+    await server.close();
   });
 
   describe('GET /', () => {

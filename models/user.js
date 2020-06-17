@@ -61,6 +61,7 @@ function validateUser(user) {
     password: Joi.string().min(5).max(250).required(),
     // passwordRepeat: Joi.ref('password'),
   });
+
   return schema.validate(user);
 }
 

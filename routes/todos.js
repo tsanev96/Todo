@@ -28,7 +28,7 @@ router.post('/', auth, validate(validateTodo), async (req, res) => {
 
   // needed if check ?
   const user = await User.findById(req.user._id);
-  if (!user) return res.status(404).send('User not found');
+  //if (!user) return res.status(404).send('User not found');
 
   const todo = new Todo({
     name: req.body.name,

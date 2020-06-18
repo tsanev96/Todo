@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const config = require('config');
+const logger = require('./logging');
 
 module.exports = function () {
   const db = config.get('db');
@@ -9,6 +10,7 @@ module.exports = function () {
       useNewUrlParser: true,
       useUnifiedTopology: true,
       useFindAndModify: false,
+      useCreateIndex: true,
     })
-    .then(() => console.log(`Connected to ${db}`));
+    .then(() => logger.info(`Connected to ${db}`));
 };
